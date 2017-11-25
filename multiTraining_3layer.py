@@ -264,7 +264,7 @@ Y = tf.cond(tf.less(tensor_1, flag),
             lambda:Y_human,
             lambda:Y_dog
             )
-regularization = tf.cond(flag>1,  
+regularization = tf.cond(tf.less(tensor_1, flag),  
                          lambda: PFNN.regularization_penalty((P0_human.alpha, P1.alpha, P2.alpha, P3_human.alpha),0.01),
                          lambda: PFNN.regularization_penalty((P0_dog.alpha,   P1.alpha, P2.alpha, P3_dog.alpha),  0.01)
                          )

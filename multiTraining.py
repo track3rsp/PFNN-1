@@ -225,28 +225,28 @@ b2 = tf.cond(tf.less(tensor_1, flag),
 
 """structure of nn"""
 keep_prob = tf.placeholder(tf.float32)  # dropout (keep_prob) rate  0.7 on training, but should be 1 for testing
-H0 = tf.cond(tf.less(tensor_1, flag),
+H0 = tf.cond(tf.less(tensor_1, flag),           #?*inputsize
              lambda: X_human[:,:-1],
              lambda: X_dog[:,:-1]
              )
 
-H0 = tf.expand_dims(H0, -1)      
+H0 = tf.expand_dims(H0, -1)                     #?*InSize*1
 H0 = tf.nn.dropout(H0, keep_prob=keep_prob)
 
-b0 = tf.expand_dims(b0, -1)      
-H1 = tf.matmul(W0, H0) + b0     
+b0 = tf.expand_dims(b0, -1)                     #?*HidSize*1
+H1 = tf.matmul(W0, H0) + b0                     #?*HidSize*InSize mul ?*InSize*1 = ?*HidSize*1
 H1 = tf.nn.elu(H1)               
 H1 = tf.nn.dropout(H1, keep_prob=keep_prob)
 
-b1 = tf.expand_dims(b1, -1)       
-H2 = tf.matmul(W1, H1) + b1       
-H2 = tf.nn.elu(H2)                
+b1 = tf.expand_dims(b1, -1)                     #?*HidSize*1
+H2 = tf.matmul(W1, H1) + b1                     #?*521*HidSize mul ?*HidSize*1 = ?*HidSize*1
+H2 = tf.nn.elu(H2)                              
 H2 = tf.nn.dropout(H2, keep_prob=keep_prob) 
 
 
-b2 = tf.expand_dims(b2, -1)       
-H3 = tf.matmul(W2, H2) + b2       
-H3 = tf.squeeze(H3, -1)           
+b2 = tf.expand_dims(b2, -1)                     #?*OutSize*1
+H3 = tf.matmul(W2, H2) + b2                     #?*OutSize*HidSize mul ?*HidSize*1 = ?*OutSize*1
+H3 = tf.squeeze(H3, -1)                         #?*OutSize
 
 
 """get the loss function"""
@@ -255,7 +255,7 @@ Y = tf.cond(tf.less(tensor_1, flag),
             lambda:Y_human,
             lambda:Y_dog
             )
-regularization = tf.cond(flag>1,  
+regularization = tf.cond(tf.less(tensor_1, flag),  
                          lambda: PFNN.regularization_penalty((P0_human.alpha, P1.alpha, P2_human.alpha),0.01),
                          lambda: PFNN.regularization_penalty((P0_dog.alpha,   P1.alpha, P2_dog.alpha),  0.01)
                          )

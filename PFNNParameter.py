@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
-tf.set_random_seed(2345)  # reproducibility
+tf.set_random_seed(23456)  # reproducibility
 
 class PFNNParameter:
     def __init__(self, shape, rng, phase, name):
