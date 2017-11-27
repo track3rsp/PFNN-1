@@ -259,12 +259,13 @@ regularization = tf.cond(tf.less(tensor_1, flag),
                          lambda: PFNN.regularization_penalty((P0_human.alpha, P1.alpha, P2_human.alpha),0.01),
                          lambda: PFNN.regularization_penalty((P0_dog.alpha,   P1.alpha, P2_dog.alpha),  0.01)
                          )
-cost = tf.reduce_mean(tf.square(Y - H3))+regularization
+loss = tf.reduce_mean(tf.square(Y - H3))
+loss_regularization = loss + regularization
 
 
 """optimizer, learning rate 0.0001"""
 learning_rate = 0.0001
-optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
+optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss_regularization)
 
 
 """session"""
@@ -280,54 +281,109 @@ sess.run(tf.global_variables_initializer())
 saver = tf.train.Saver()
 
 
-#start to train
-print('Learning start..')
+#batch size and epoch
 batch_size = 32
 training_epochs = 200
+total_batch = int(size_dog / batch_size)
+print("totoal_batch:", total_batch)
+
+#randomly select training set
 I = np.arange(size_dog)
 rng.shuffle(I)
-total_batch = int(size_dog / batch_size)
-print("totoal_batch", total_batch)
-error_human = np.ones(training_epochs)
-error_dog   = np.ones(training_epochs)
+
+#training set and  test set
+num_testBatch  = np.int(total_batch/10)
+num_trainBatch = total_batch - num_testBatch
+print("training_batch:", num_trainBatch)
+print("test_batch:", num_testBatch)
+
+#used for saving errorof each epoch
+error_human_train = np.ones(training_epochs)
+error_human_test  = np.ones(training_epochs)
+error_dog_train   = np.ones(training_epochs)
+error_dog_test    = np.ones(training_epochs)
+
+#start training 
+print('Learning start..')
 for epoch in range(training_epochs):
-    human_cost = 0
-    dog_cost = 0
-    for i in range(total_batch):
+    human_loss_train = 0
+    human_loss_test  = 0
+    dog_loss_train   = 0
+    dog_loss_test    = 0
+    
+    #training 
+    for i in range(num_trainBatch):
         index_train = I[i*batch_size:(i+1)*batch_size]
         human_xs = input_human[index_train]
         human_ys = output_human[index_train]
         dog_xs   = input_dog[index_train]
         dog_ys   = output_dog[index_train]
-        
-        
+        #train human
         feed_dict = {X_human: human_xs, Y_human: human_ys, 
                      X_dog: dog_xs, Y_dog: dog_ys, 
                      flag: 2, 
                      keep_prob: 0.7
                      }
-        l_human, _, = sess.run([cost, optimizer], feed_dict=feed_dict)
-        human_cost += l_human / total_batch
-        
+        l_human, _, = sess.run([loss, optimizer], feed_dict=feed_dict)
+        human_loss_train += l_human / num_trainBatch
+        #train dog
         feed_dict = {X_human: human_xs, Y_human: human_ys, 
                      X_dog: dog_xs, Y_dog: dog_ys, 
                      flag: 1, 
                      keep_prob: 0.7
                      }
-        l_dog, _, = sess.run([cost, optimizer], feed_dict=feed_dict)
-        dog_cost += l_dog / total_batch
-        
+        l_dog, _, = sess.run([loss, optimizer], feed_dict=feed_dict)
+        dog_loss_train += l_dog / num_trainBatch
         if i % 1000 == 0:
-            print(i, "humanloss:",l_human, "dogloss:", l_dog)
-
-    print('Epoch:', '%04d' % (epoch + 1), 'humanloss =', '{:.9f}'.format(human_cost))
-    print('Epoch:', '%04d' % (epoch + 1), 'dogloss =', '{:.9f}'.format(dog_cost))
-    save_path = saver.save(sess, "./result/model/model.ckpt")
-    error_human[epoch] = human_cost
-    error_dog[epoch]   =dog_cost
-    error_human.tofile("./result/model/error_human.bin")
-    error_dog.tofile("./result/model/error_dog.bin")
+            print(i, "human_train_loss:",l_human, "dog_train_loss:", l_dog)
+                     
+    #testing   
+    for i in range(num_testBatch):
+        if i==0:
+            index_text = I[-(i+1)*batch_size:]
+        else:
+            index_text = I[-(i+1)*batch_size: -i*batch_size]
+        human_xs = input_human[index_text]
+        human_ys = output_human[index_text]
+        dog_xs   = input_dog[index_text]
+        dog_ys   = output_dog[index_text]
+        #test human
+        feed_dict = {X_human: human_xs, Y_human: human_ys, 
+                     X_dog: dog_xs, Y_dog: dog_ys, 
+                     flag: 2, 
+                     keep_prob: 1
+                     }
+        l_human = sess.run([loss], feed_dict=feed_dict)
+        human_loss_test += l_human / num_trainBatch
+        #test dog
+        feed_dict = {X_human: human_xs, Y_human: human_ys, 
+                     X_dog: dog_xs, Y_dog: dog_ys, 
+                     flag: 1, 
+                     keep_prob: 1
+                     }
+        l_dog  = sess.run([loss], feed_dict=feed_dict)
+        dog_loss_test += l_dog / num_trainBatch
+        if i % 1000 == 0:
+            print(i, "human_test_loss:",l_human, "dog_test_loss:", l_dog)            
     
+
+    print('Epoch:', '%04d' % (epoch + 1), 'human_train_loss =', '{:.9f}'.format(human_loss_train))
+    print('Epoch:', '%04d' % (epoch + 1), 'dog_train_loss =', '{:.9f}'.format(dog_loss_train))
+    
+    print('Epoch:', '%04d' % (epoch + 1), 'human_test_loss =', '{:.9f}'.format(human_loss_test))
+    print('Epoch:', '%04d' % (epoch + 1), 'dog_test_loss =', '{:.9f}'.format(dog_loss_test))
+    
+
+    error_human_train[epoch] = human_loss_train
+    error_dog_train[epoch]   = dog_loss_train
+    error_human_test[epoch]  = human_loss_test
+    error_dog_test[epoch]    = dog_loss_test
+    error_human_train.tofile("./result/model/error_human_train.bin")
+    error_human_test.tofile("./result/model/error_human_test.bin")
+    error_dog_train.tofile("./result/model/error_dog_train.bin")
+    error_dog_test.tofile("./result/model/error_dog_test.bin")
+    
+    save_path = saver.save(sess, "./result/model/model.ckpt")    
     PFNN.save_network((sess.run(P0_dog.alpha),sess.run(P1.alpha),sess.run(P2_dog.alpha)),
                       (sess.run(P0_dog.beta), sess.run(P1.beta), sess.run(P2_dog.beta)),
                       50,
