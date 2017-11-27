@@ -343,8 +343,8 @@ for epoch in range(training_epochs):
             index_text = I[-(i+1)*batch_size:]
         else:
             index_text = I[-(i+1)*batch_size: -i*batch_size]
-        human_xs = input_human[index_text]
-        human_ys = output_human[index_text]
+        human_xs = input_human[index_test]
+        human_ys = output_human[index_test]
         dog_xs   = input_dog[index_text]
         dog_ys   = output_dog[index_text]
         #test human
