@@ -195,9 +195,9 @@ for epoch in range(training_epochs):
             
     for i in range(num_testBatch):
         if i==0:
-            index_text = I[-(i+1)*batch_size: ]
+            index_test = I[-(i+1)*batch_size: ]
         else:
-            index_text = I[-(i+1)*batch_size: -i*batch_size]
+            index_test = I[-(i+1)*batch_size: -i*batch_size]
         batch_xs = input_x[index_test]
         batch_ys = input_y[index_test]
         feed_dict = {X_nn: batch_xs, Y_nn: batch_ys, keep_prob: 1}

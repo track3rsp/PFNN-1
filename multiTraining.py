@@ -340,13 +340,13 @@ for epoch in range(training_epochs):
     #testing   
     for i in range(num_testBatch):
         if i==0:
-            index_text = I[-(i+1)*batch_size:]
+            index_test = I[-(i+1)*batch_size:]
         else:
-            index_text = I[-(i+1)*batch_size: -i*batch_size]
+            index_test = I[-(i+1)*batch_size: -i*batch_size]
         human_xs = input_human[index_test]
         human_ys = output_human[index_test]
-        dog_xs   = input_dog[index_text]
-        dog_ys   = output_dog[index_text]
+        dog_xs   = input_dog[index_test]
+        dog_ys   = output_dog[index_test]
         #test human
         feed_dict = {X_human: human_xs, Y_human: human_ys, 
                      X_dog: dog_xs, Y_dog: dog_ys, 
