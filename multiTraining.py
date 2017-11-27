@@ -354,7 +354,7 @@ for epoch in range(training_epochs):
                      keep_prob: 1
                      }
         l_human = sess.run(loss, feed_dict=feed_dict)
-        human_loss_test += l_human / num_trainBatch
+        human_loss_test += l_human / num_testBatch
         #test dog
         feed_dict = {X_human: human_xs, Y_human: human_ys, 
                      X_dog: dog_xs, Y_dog: dog_ys, 
@@ -362,7 +362,7 @@ for epoch in range(training_epochs):
                      keep_prob: 1
                      }
         l_dog  = sess.run(loss, feed_dict=feed_dict)
-        dog_loss_test += l_dog / num_trainBatch
+        dog_loss_test += l_dog / num_testBatch
         if i % 1000 == 0:
             print(i, "human_test_loss:",l_human, "dog_test_loss:", l_dog)            
     
