@@ -201,7 +201,7 @@ for epoch in range(training_epochs):
         batch_xs = input_x[index_test]
         batch_ys = input_y[index_test]
         feed_dict = {X_nn: batch_xs, Y_nn: batch_ys, keep_prob: 1}
-        testError = sess.run([loss], feed_dict=feed_dict)
+        testError = sess.run(loss, feed_dict=feed_dict)
         avg_cost_test += testError / num_testBatch
         if i % 1000 == 0:
             print(i, "testloss:",testError)
