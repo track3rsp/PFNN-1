@@ -14,7 +14,7 @@ Y = database['Yun']
 P = database['Pun']
 num_p = 1                             #number of copy of phase
 P = P[:,np.newaxis]
-P_ex = np.ones((len(P),num_p))*P
+P_ex = np.float32(np.ones((len(P),num_p))*P)
 
 X = np.concatenate((X,P_ex),axis = 1) #input of nn, including X and P
 
