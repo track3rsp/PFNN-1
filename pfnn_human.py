@@ -176,8 +176,12 @@ for epoch in range(training_epochs):
     PFNN.save_network((sess.run(P0.alpha), sess.run(P1.alpha), sess.run(P2.alpha)), 
                       (sess.run(P0.beta), sess.run(P1.beta), sess.run(P2.beta)), 
                       50, 
-                      './human/dog/nn'
+                      './human/nn'
                      )
+    PFNN.save_control((sess.run(P0.alpha), sess.run(P1.alpha), sess.run(P2.alpha)), 
+                      (sess.run(P0.beta), sess.run(P1.beta), sess.run(P2.beta)),
+                      './human/control'
+                      )
     print('Epoch:', '%04d' % (epoch + 1), 'loss =', '{:.9f}'.format(avg_cost))
     error[epoch] = avg_cost
     error.tofile("./human/model/error.bin")

@@ -65,6 +65,12 @@ class PFNNParameter:
         wamount = tf.expand_dims(bamount, 1) # expand 2 dimension [n*1*1]
         return  pindex_1, bamount, wamount
     
+    #for transfer
+    def setParameter(self, alpha_transfer, beta_transfer):
+        self.alpha = alpha_transfer
+        self.beta  = beta_transfer
+        
+    
 
 def cubic(y0, y1, y2, y3, mu):
     return (
@@ -106,6 +112,23 @@ def regularization_penalty(alpha, gamma):
     for i in range(number_alpha):
         penalty += tf.reduce_mean(tf.abs(alpha[i]))
     return gamma * penalty / number_alpha
+
+
+
+"""for multi-task"""
+def save_control(alpha, beta, filename):
+    for i in range(len(alpha)):
+        alpha[i].tofile(filename +'/alpha%0i.bin' % i)
+        beta[i].tofile (filename +'/beta%0i.bin' % i)
+
+
+
+
+
+
+
+
+
 
 
 
