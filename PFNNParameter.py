@@ -67,6 +67,8 @@ class PFNNParameter:
     
     #for transfer
     def setParameter(self, alpha_transfer, beta_transfer):
+        alpha_transfer = tf.convert_to_tensor(alpha_transfer, dtype = tf.float32)
+        beta_transfer  = tf.convert_to_tensor(beta_transfer, dtype = tf.float32)
         self.alpha = alpha_transfer
         self.beta  = beta_transfer
         
