@@ -72,6 +72,11 @@ class PFNNParameter:
         self.alpha = alpha_transfer
         self.beta  = beta_transfer
         
+    def getWeights(self, index):
+        return tf.gather(self.weight, index, axis = -1)
+    
+        
+        
     
 
 def cubic(y0, y1, y2, y3, mu):
