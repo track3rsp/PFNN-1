@@ -440,7 +440,8 @@ for epoch in range(training_epochs):
                       50,
                       './result/dogNN'
                       )
-    PFNN.save_network((sess.run(P0_human.alpha),sess.run(P1.alpha),sess.run(P2_human.alpha)),
+    PFNN.save_network((sess.run(tf.concat([P0_human.alpha, P0_dog.getAlpha(index_terrain)],axis = -1)),
+                       sess.run(P1.alpha),sess.run(P2_human.alpha)),
                       (sess.run(P0_human.beta), sess.run(P1.beta), sess.run(P2_human.beta)),
                       50,
                       './result/humanNN'
@@ -451,6 +452,7 @@ for epoch in range(training_epochs):
         path_human = './result/humanweights/humanNN%03i' % epoch
         if not os.path.exists(path_dog):
             os.makedirs(path_dog)
+            
         PFNN.save_network((sess.run(P0_dog.alpha),sess.run(P1.alpha),sess.run(P2_dog.alpha)),
                           (sess.run(P0_dog.beta), sess.run(P1.beta), sess.run(P2_dog.beta)),
                           50,
@@ -458,7 +460,9 @@ for epoch in range(training_epochs):
                          )
         if not os.path.exists(path_human):
             os.makedirs(path_human)
-        PFNN.save_network((sess.run(P0_human.alpha),sess.run(P1.alpha),sess.run(P2_human.alpha)),
+            
+        PFNN.save_network((sess.run(tf.concat([P0_human.alpha, P0_dog.getAlpha(index_terrain)],axis = -1)),
+                           sess.run(P1.alpha),sess.run(P2_human.alpha)),
                           (sess.run(P0_human.beta), sess.run(P1.beta), sess.run(P2_human.beta)),
                           50,
                           path_human

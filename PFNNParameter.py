@@ -75,6 +75,9 @@ class PFNNParameter:
     def getWeights(self, index):
         return tf.gather(self.weight, index, axis = -1)
     
+    def getAlpha(self, index):
+        return tf.gather(self.alpha, index, axis = -1)
+    
         
         
     
