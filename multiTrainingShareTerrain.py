@@ -162,8 +162,8 @@ def LoadDog(filename):
     
     #get the terrain index for multitask learning
     index_terrain = list(range(3*num_trajectory))
-    terrainM_start = offset+jointNeurons+1
-    terrainL_start = offset+jointNeurons+6*num_trajectory
+    terrainM_start = 1
+    terrainL_start = 6*num_trajectory
     for i in range(num_trajectory):
         index_terrain[i]                  = terrainL_start+1
         index_terrain[i+num_trajectory]   = terrainM_start 
