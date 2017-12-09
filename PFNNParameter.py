@@ -5,6 +5,8 @@ tf.set_random_seed(23456)  # reproducibility
 
 class PFNNParameter:
     def __init__(self, shape, rng, phase, name):
+        """rng"""
+        self.initialRNG   = rng
         
         """shape"""
         self.control_num  = shape[0]  #4 control points
@@ -12,7 +14,7 @@ class PFNNParameter:
         self.bias_shape   = shape[:-1]
         
         """"alpha and beta"""
-        self.alpha        =  tf.Variable(self.initial_alpha(rng), name=name+'alpha') 
+        self.alpha        =  tf.Variable(self.initial_alpha(), name=name+'alpha') 
         self.beta         =  tf.Variable(self.initial_beta(), name=name+'beta') 
         
         """index and weight for phase function"""
@@ -24,22 +26,27 @@ class PFNNParameter:
         """weight and bias"""
         self.weight       = self.cotrol(1)
         self.bias         = self.cotrol(0)
-                            
+        
+
         
     """initialize parameters in phase function i.e. alpha and beta"""
-    def initial_alpha(self, rng):
+    def initial_alpha_np(self):
         shape = self.weight_shape
+        rng   = self.initialRNG
         alpha_bound = np.sqrt(6. / np.prod(shape[-2:]))
         alpha = np.asarray(
             rng.uniform(low=-alpha_bound, high=alpha_bound, size=shape),
             dtype=np.float32)
+        return alpha
+    
+    def initial_alpha(self):
+        alpha = self.initial_alpha_np()
         return tf.convert_to_tensor(alpha, dtype = tf.float32)
     
     def initial_beta(self):
         return tf.zeros(self.bias_shape, tf.float32)
     
     """ cubic function to calculate the weights and bias in nn"""
-    
     def cotrol(self, flag):
         if flag:
             y0 = tf.nn.embedding_lookup(self.alpha, self.pindex_0)
@@ -54,7 +61,7 @@ class PFNNParameter:
             y3 = tf.nn.embedding_lookup(self.beta, self.pindex_3)
             mu = self.bamount
         return cubic(y0, y1, y2, y3, mu)
-
+    # get index and weights for cubic function
     def getIndexAmount(self, phase):
         nslices = self.control_num                    # number of control points in phase function
         pscale = nslices * phase
@@ -65,22 +72,29 @@ class PFNNParameter:
         wamount = tf.expand_dims(bamount, 1) # expand 2 dimension [n*1*1]
         return  pindex_1, bamount, wamount
     
-    #for transfer
+    #for transfer the value of alpha and beta
     def setParameter(self, alpha_transfer, beta_transfer):
         alpha_transfer = tf.convert_to_tensor(alpha_transfer, dtype = tf.float32)
         beta_transfer  = tf.convert_to_tensor(beta_transfer, dtype = tf.float32)
         self.alpha = alpha_transfer
         self.beta  = beta_transfer
-        
+    
+    #for tansfer the terrain part in alpha
+    def initial_transferAlpha(self, index, value):
+        alpha = self.initial_alpha_np()
+        for i in range(len(index)):
+            index_t = index[i]
+            alpha[...,index_t] =  value[...,i]
+        self.alpha = tf.convert_to_tensor(alpha, dtype = tf.float32)
+           
+    
     def getWeights(self, index):
         return tf.gather(self.weight, index, axis = -1)
     
     def getAlpha(self, index):
         return tf.gather(self.alpha, index, axis = -1)
     
-        
-        
-    
+
 
 def cubic(y0, y1, y2, y3, mu):
     return (
@@ -125,7 +139,7 @@ def regularization_penalty(alpha, gamma):
 
 
 
-"""for multi-task"""
+"""for multi-task, i.e. save value of alpha and beta"""
 def save_control(alpha, beta, filename):
     for i in range(len(alpha)):
         alpha[i].tofile(filename +'/alpha%0i.bin' % i)
