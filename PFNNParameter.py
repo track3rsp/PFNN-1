@@ -76,8 +76,13 @@ class PFNNParameter:
     def setParameter(self, alpha_transfer, beta_transfer):
         alpha_transfer = tf.convert_to_tensor(alpha_transfer, dtype = tf.float32)
         beta_transfer  = tf.convert_to_tensor(beta_transfer, dtype = tf.float32)
-        self.alpha = alpha_transfer
-        self.beta  = beta_transfer
+        self.alpha     = tf.Variable(alpha_transfer, name='alpha0') 
+        self.beta      = tf.Variable(beta_transfer,  name='beta0') 
+        
+        #after updating alpha and beta, we must update weights and bias, because you need to relink the weights in tensorflow 
+        #with new allha.this is important!
+        self.weight       = self.cotrol(1)
+        self.bias         = self.cotrol(0)
     
     #for tansfer the terrain part in alpha
     def initial_transferAlpha(self, index, value):
@@ -85,8 +90,12 @@ class PFNNParameter:
         for i in range(len(index)):
             index_t = index[i]
             alpha[...,index_t] =  value[...,i]
-        self.alpha = tf.convert_to_tensor(alpha, dtype = tf.float32)
-           
+        alpha_transfer = tf.convert_to_tensor(alpha, dtype = tf.float32)
+        self.alpha     = tf.Variable(alpha_transfer, name='alpha0') 
+        
+        #after updating alpha and beta, we must update weights and bias, because you need to relink the weights in tensorflow 
+        #with new allha.this is important!
+        self.weight    = self.cotrol(1)
     
     def getWeights(self, index):
         return tf.gather(self.weight, index, axis = -1)

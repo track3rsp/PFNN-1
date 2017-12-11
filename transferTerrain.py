@@ -106,7 +106,9 @@ inputSize_human  = 342
 terrainNeurons   = num_trajectory*3
 sharedAlpha = np.fromfile('./control/alpha0.bin', dtype=np.float32).reshape((4,512,inputSize_human))
 terrainAlpha = sharedAlpha[...,-terrainNeurons:]
-#terrainAlpha = tf.convert_to_tensor(terrainAlpha, dtype = tf.float32)
+#transfer 
+sharedAlpha1 = np.fromfile('./control/alpha1.bin', dtype=np.float32).reshape((4,512,512))
+sharedBeta1  = np.fromfile('./control/beta1.bin', dtype=np.float32).reshape((4,512))
 
 
 """ Phase Function Neural Network """
@@ -117,15 +119,13 @@ Y_nn = tf.placeholder(tf.float32, [None, output_size], name='y-input')
 """parameter of nn"""
 rng = np.random.RandomState(23456)
 nslices = 4                             # number of control points in phase function
-phase = X_nn[:,-1]                      #phase
+phase = X_nn[:,-1]                      # phase
 P0 = PFNNParameter((nslices, 512, input_size-1), rng, phase, 'wb0')
 #transfer terrain
 P0.initial_transferAlpha(index_terrain,terrainAlpha)   
-    
 P1 = PFNNParameter((nslices, 512, 512), rng, phase, 'wb1')
+P1.setParameter(sharedAlpha1,sharedBeta1)
 P2 = PFNNParameter((nslices, output_size, 512), rng, phase, 'wb2')
-
-
 
 
 keep_prob = tf.placeholder(tf.float32)  # dropout (keep_prob) rate  0.7 on training, but should be 1 for testing
@@ -155,7 +155,8 @@ def regularization_penalty(a0, a1, a2, gamma):
     return gamma * (tf.reduce_mean(tf.abs(a0))+tf.reduce_mean(tf.abs(a1))+tf.reduce_mean(tf.abs(a2)))/3
 
 loss = tf.reduce_mean(tf.square(Y_nn - H3))
-loss_regularization = loss + regularization_penalty(P0.alpha, P1.alpha, P1.alpha, 0.01)
+#loss_regularization = loss + regularization_penalty(P0.alpha, P1.alpha, P1.alpha, 0.01)
+loss_regularization = loss
 
 #we can fix some weight for not updating
 P1.alpha.trainable = False
@@ -198,7 +199,7 @@ print("training_batch:", num_trainBatch)
 print("test_batch:", num_testBatch)
 
    
-#used for saving errorof each epoch
+#used for saving error of each epoch
 error_train = np.ones(training_epochs)
 error_test  = np.ones(training_epochs)
 
