@@ -97,11 +97,18 @@ class PFNNParameter:
         #with new allha.this is important!
         self.weight    = self.cotrol(1)
     
-    def getWeights(self, index):
-        return tf.gather(self.weight, index, axis = -1)
+    def getWeights(self, index, axis):
+        return tf.gather(self.weight, index, axis = axis)
     
-    def getAlpha(self, index):
-        return tf.gather(self.alpha, index, axis = -1)
+    def getBias(self, index, axis):
+        return tf.gather(self.bias, index, axis = axis)
+    
+    def getAlpha(self, index, axis):
+        return tf.gather(self.alpha, index, axis = axis)
+    
+    def getBeta(self, index, axis):
+        return tf.gather(self.beta, index, axis = axis)
+    
     
 
 
