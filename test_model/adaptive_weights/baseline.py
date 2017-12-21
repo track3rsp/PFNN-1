@@ -11,7 +11,7 @@ num_humanjoint  = 31
 num_dogjoint    = 21
 num_trajectory  = 12
 
-data = np.float32(np.loadtxt('data.txt'))
+data = np.float32(np.loadtxt('newData.txt'))
 frameCount = data.shape[0]
 A = []
 B = []
@@ -92,7 +92,6 @@ print("DogData is processed")
 
 #--------------------------------above is dataprocess-------------------------------------
 
-
 """ Phase Function Neural Network """
 
 """input of nn"""
@@ -106,35 +105,35 @@ rng = np.random.RandomState(23456)
 keep_prob = tf.placeholder(tf.float32)  # dropout (keep_prob) rate  0.7 on training, but should be 1 for testing
 
 # W0: 512*342 
-W0 = tf.get_variable("W0", shape=[input_size, 512], initializer=tf.contrib.layers.xavier_initializer())
-b0 = tf.Variable(initial_beta((1, 512)), name='b0') #b0: 1*512
+W0 = tf.get_variable("W0", shape=[512,input_size], initializer=tf.contrib.layers.xavier_initializer())     #W0: 512*input_size 
+b0 = tf.Variable(initial_beta((512,1)), name='b0')                                                         #b0: 512*1
 
 # W1: 512*512 
-W1 = tf.get_variable("W1", shape=[512, 512], initializer=tf.contrib.layers.xavier_initializer())
-b1 = tf.Variable(initial_beta((1, 512)), name='b1') #b0: 1*512
+W1 = tf.get_variable("W1", shape=[512, 512], initializer=tf.contrib.layers.xavier_initializer())           #W1: 512*512
+b1 = tf.Variable(initial_beta((512,1)), name='b1')                                                        #b1: 512*1
 
 
 # W2: 512*311
-W2 = tf.get_variable("W2", shape=[512, output_size], initializer=tf.contrib.layers.xavier_initializer())
-b2 = tf.Variable(initial_beta((1, output_size)), name='b2') #b0: 1*512
+W2 = tf.get_variable("W2", shape=[output_size, 512], initializer=tf.contrib.layers.xavier_initializer())   #W2: out_size*512
+b2 = tf.Variable(initial_beta((output_size, 1)), name='b2')                                                #b2: out_size*1
 
 
 
 
 #structure of nn
-H0 = X_nn        #input of nn     dims:  ?*342
+H0 = tf.transpose(X_nn)           #input of nn     dims:  in*?
 H0 = tf.nn.dropout(H0, keep_prob=keep_prob)
 
-H1 = tf.matmul(H0, W0) + b0      #dims:  ?*342 mul 342*512 = ?*512
-H1 = tf.nn.elu(H1)               #get 1th hidden layer with 'ELU' funciton
+H1 = tf.matmul(W0, H0) + b0       #dims: hid*in mul in*? = hid*?
+H1 = tf.nn.elu(H1)                #get 1th hidden layer with 'ELU' funciton
 H1 = tf.nn.dropout(H1, keep_prob=keep_prob) #dropout with parameter of 'keep_prob'
 
 
-H2 = tf.matmul(H1, W1) + b1       #dims: ?*512 mul 512*512 = ?*512
+H2 = tf.matmul(W1, H1) + b1       #dims: hid*hid mul hid*? = hid*?
 H2 = tf.nn.elu(H2)                #get 2th hidden layer with 'ELU' funciton
 H2 = tf.nn.dropout(H2, keep_prob=keep_prob) #dropout with parameter of 'keep_prob'
 
-H3 = tf.matmul(H2, W2) + b2       #dims: ?*512 mul 512*311 =?*311
+H3 = tf.matmul(W2, H2) + b2       #dims: out*hid mul hid*? =out*?
 
 
 #loss function with regularizatoin, and regularization rate=0.01
@@ -150,7 +149,7 @@ regularization_penalty = tf.contrib.layers.apply_regularization(l1_regularizer, 
 def regularization_penalty(a0, a1, a2, gamma):
     return gamma * (tf.reduce_mean(tf.abs(a0))+tf.reduce_mean(tf.abs(a1))+tf.reduce_mean(tf.abs(a2)))/3
 
-loss = tf.reduce_mean(tf.square(Y_nn - H3))
+loss = tf.reduce_mean(tf.square(tf.transpose(Y_nn) - H3))
 loss_regularization = loss + regularization_penalty(W0, W1, W2, 0.01)
 
 
@@ -261,9 +260,9 @@ for epoch in range(training_epochs):
     
     
     """get np.float32 format"""
-    weight0 = sess.run(W0).transpose()
-    weight1 = sess.run(W1).transpose()
-    weight2 = sess.run(W2).transpose()
+    weight0 = sess.run(W0)
+    weight1 = sess.run(W1)
+    weight2 = sess.run(W2)
     bias0 = sess.run(b0)
     bias1 = sess.run(b1)
     bias2 = sess.run(b2)
