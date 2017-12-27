@@ -25,11 +25,11 @@ C = np.asarray(C)
 number_example =len(A)    #number of training data
 
 
-num_joint=21              #number of joint
+num_joint=27              #number of joint
 num_trajectory = 12       #number of points in trajectory
-num_style = 8             #number of style
+num_style = 7             #number of style
 offset= 3                 #first 3 item in data are no use.
-jointNeurons = 6*num_joint  #pos, vel, trans 
+jointNeurons = 12*num_joint  #pos, vel, trans 
 trajectoryNeurons = (8+num_style)*num_trajectory #pos, dir,hei, style
     
 #input 
@@ -74,10 +74,10 @@ X = (X - Xmean) / Xstd
 Y = (Y - Ymean) / Ystd
 
 #save mean and std
-Xmean.tofile('./dog/data/Xmean.bin')
-Ymean.tofile('./dog/data/Ymean.bin')
-Xstd.tofile('./dog/data/Xstd.bin')
-Ystd.tofile('./dog/data/Ystd.bin')
+Xmean.tofile('./dog/nn/Xmean.bin')
+Ymean.tofile('./dog/nn/Ymean.bin')
+Xstd.tofile('./dog/nn/Xstd.bin')
+Ystd.tofile('./dog/nn/Ystd.bin')
 
 
 input_x = np.concatenate((X,P),axis = 1) #input of nn, including X and P
@@ -168,7 +168,8 @@ rng.shuffle(I)
 
 
 #training set and  test set
-num_testBatch  = np.int(total_batch/10)
+count_test     = 0
+num_testBatch  = np.int(total_batch * count_test)
 num_trainBatch = total_batch - num_testBatch
 print("training_batch:", num_trainBatch)
 print("test_batch:", num_testBatch)
@@ -188,10 +189,10 @@ for epoch in range(training_epochs):
         batch_xs = input_x[index_train]
         batch_ys = input_y[index_train]
         feed_dict = {X_nn: batch_xs, Y_nn: batch_ys, keep_prob: 0.7}
-        l,l_r, _, = sess.run([loss,loss_regularization, optimizer], feed_dict=feed_dict)
+        l, _, = sess.run([loss, optimizer], feed_dict=feed_dict)
         avg_cost_train += l / num_trainBatch
         if i % 1000 == 0:
-            print(i, "trainingloss:", l, "trainingloss_reg:", l_r)
+            print(i, "trainingloss:", l)
             
     for i in range(num_testBatch):
         if i==0:

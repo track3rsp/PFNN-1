@@ -59,10 +59,10 @@ Ystd[8+w*2+j*3*1:8+w*2+j*3*2] = Ystd[8+w*2+j*3*1:8+w*2+j*3*2].mean() # Vel
 Ystd[8+w*2+j*3*2:8+w*2+j*3*3] = Ystd[8+w*2+j*3*2:8+w*2+j*3*3].mean() # Rot
 
 """ Save Mean / Std / Min / Max """
-Xmean.tofile('./human/data/Xmean.bin')
-Ymean.tofile('./human/data/Ymean.bin')
-Xstd.tofile('./human/data/Xstd.bin')
-Ystd.tofile('./human/data/Ystd.bin')
+Xmean.tofile('./human/nn/Xmean.bin')
+Ymean.tofile('./human/nn/Ymean.bin')
+Xstd.tofile('./human/nn/Xstd.bin')
+Ystd.tofile('./human/nn/Ystd.bin')
 
 
 """ Normalize Data """
@@ -166,11 +166,11 @@ for epoch in range(training_epochs):
         batch_xs = input_x[index_train]
         batch_ys = input_y[index_train]
         feed_dict = {X_nn: batch_xs, Y_nn: batch_ys, keep_prob: 0.7}
-        l,c, _, = sess.run([loss,cost, optimizer], feed_dict=feed_dict)
+        l, _, = sess.run([cost, optimizer], feed_dict=feed_dict)
         avg_cost += l / total_batch
         
         if i % 1000 == 0:
-            print(i, "loss:", l, "cost:", c)
+            print(i, "loss:", l)
     
     save_path = saver.save(sess, "./human/model/model.ckpt")
     PFNN.save_network((sess.run(P0.alpha), sess.run(P1.alpha), sess.run(P2.alpha)), 
