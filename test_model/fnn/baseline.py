@@ -6,97 +6,91 @@ import os.path
 tf.set_random_seed(23456)  # reproducibility
 
 
-""" Load Data """
+#global parameters for dog and human
+num_humanjoint  = 31
+num_dogjoint    = 27
+num_trajectory  = 12
 
-database = np.load('database.npz')
-X = database['Xun']
-Y = database['Yun']
-P = database['Pun']
-num_p = 1                             #number of copy of phase
+data = np.float32(np.loadtxt('newData.txt'))
+frameCount = data.shape[0]
+A = []
+B = []
+C = []
+for i in range(frameCount-2):
+    if(data[i,0] == data[i+1,0] and data[i,0] == data[i+2,0]):
+        A.append(data[i])
+        B.append(data[i+1])
+        C.append(data[i+2])
+A = np.asarray(A)
+B = np.asarray(B)
+C = np.asarray(C)
+
+num_joint = num_dogjoint
+num_trajectory = 12
+num_style = 7
+offset = 3
+jointNeurons = 12*num_joint  #pos, vel, trans rot vel magnitudes
+trajectoryNeurons = (8+num_style)*num_trajectory #pos, dir,hei, style
+    
+
+#input 
+X = np.concatenate(
+        (
+                B[:,offset+jointNeurons:offset+jointNeurons+trajectoryNeurons], #trajectory pos, dir, hei, style of B
+                A[:,offset:offset+jointNeurons]                                 #joint pos, vel, trans rot vel magnitudes of A
+        ),axis = 1) 
+
+#get trajecoty positionX,Z velocityX,Z for future trajectory
+Traj_out = np.float32(np.zeros((A.shape[0],np.int(num_trajectory/2*4))))
+Traj_out_start = np.int(offset+ jointNeurons+ num_trajectory/2*6)
+for i in range(np.int(num_trajectory/2)):
+    Traj_out[:,i*4:(i+1)*4] = C[:,[Traj_out_start,Traj_out_start+2,Traj_out_start+3,Traj_out_start+5]]
+    Traj_out_start += 6
+    
+Y = np.concatenate(
+        (
+                Traj_out, 
+                B[:,offset:offset+jointNeurons], 
+                B[:,offset+jointNeurons+trajectoryNeurons+1:]
+        ),axis = 1)
+
+P = B[:,offset+jointNeurons+trajectoryNeurons]
 P = P[:,np.newaxis]
-P_ex = np.float32(np.ones((len(P),num_p))*P)
-
-X = np.concatenate((X,P_ex),axis = 1) #input of nn, including X and P
-
-print(X.shape, Y.shape)
-
-
-""" Calculate Mean and Std """
 
 Xmean, Xstd = X.mean(axis=0), X.std(axis=0)
 Ymean, Ystd = Y.mean(axis=0), Y.std(axis=0)
 
-j = 31
-w = ((60*2)//10)
-
-Xstd[w*0:w* 1] = Xstd[w*0:w* 1].mean() # Trajectory Past Positions
-Xstd[w*1:w* 2] = Xstd[w*1:w* 2].mean() # Trajectory Future Positions
-Xstd[w*2:w* 3] = Xstd[w*2:w* 3].mean() # Trajectory Past Directions
-Xstd[w*3:w* 4] = Xstd[w*3:w* 4].mean() # Trajectory Future Directions
-Xstd[w*4:w*10] = Xstd[w*4:w*10].mean() # Trajectory Gait
-
-""" Mask Out Unused Joints in Input """
-
-joint_weights = np.array([
-    1,
-    1e-10, 1, 1, 1, 1,
-    1e-10, 1, 1, 1, 1,
-    1e-10, 1, 1,
-    1e-10, 1, 1,
-    1e-10, 1, 1, 1, 1e-10, 1e-10, 1e-10,
-    1e-10, 1, 1, 1, 1e-10, 1e-10, 1e-10]).repeat(3)
-
-Xstd[w*10+j*3*0:w*10+j*3*1] = Xstd[w*10+j*3*0:w*10+j*3*1].mean() / (joint_weights * 0.1) # Pos
-Xstd[w*10+j*3*1:w*10+j*3*2] = Xstd[w*10+j*3*1:w*10+j*3*2].mean() / (joint_weights * 0.1) # Vel
-Xstd[w*10+j*3*2:-num_p    ] = Xstd[w*10+j*3*2:-num_p    ].mean() # Terrain
-Xstd[-num_p:              ] = Xstd[-num_p:              ].mean() # phase
-
-Ystd[0:2] = Ystd[0:2].mean() # Translational Velocity
-Ystd[2:3] = Ystd[2:3].mean() # Rotational Velocity
-Ystd[3:4] = Ystd[3:4].mean() # Change in Phase
-Ystd[4:8] = Ystd[4:8].mean() # Contacts
-
-Ystd[8+w*0:8+w*1] = Ystd[8+w*0:8+w*1].mean() # Trajectory Future Positions
-Ystd[8+w*1:8+w*2] = Ystd[8+w*1:8+w*2].mean() # Trajectory Future Directions
-
-Ystd[8+w*2+j*3*0:8+w*2+j*3*1] = Ystd[8+w*2+j*3*0:8+w*2+j*3*1].mean() # Pos
-Ystd[8+w*2+j*3*1:8+w*2+j*3*2] = Ystd[8+w*2+j*3*1:8+w*2+j*3*2].mean() # Vel
-Ystd[8+w*2+j*3*2:8+w*2+j*3*3] = Ystd[8+w*2+j*3*2:8+w*2+j*3*3].mean() # Rot
-
-""" Save Mean / Std / Min / Max """
-Xmean = np.float32(Xmean)
-Xstd = np.float32(Xstd)
+for i in range(Xstd.size):
+    if (Xstd[i]==0):
+        Xstd[i]=1
+for i in range(Ystd.size):
+    if (Ystd[i]==0):
+        Ystd[i]=1
+     
+X = (X - Xmean) / Xstd
+Y = (Y - Ymean) / Ystd
 
 
-Xmean.tofile('./fnn/data/Xmean.bin')
-Ymean.tofile('./fnn/data/Ymean.bin')
-Xstd.tofile('./fnn/data/Xstd.bin')
-Ystd.tofile('./fnn/data/Ystd.bin')
+Xmean.tofile('./fnn/dogdata/Xmean.bin')
+Ymean.tofile('./fnn/dogdata/Ymean.bin')
+Xstd.tofile('./fnn/dogdata/Xstd.bin')
+Ystd.tofile('./fnn/dogdata/Ystd.bin')
 
 
-""" Normalize Data """
-for i in range(X.shape[0]):
-    X[i,:] = (X[i,:]-Xmean) / Xstd
-
-for i in range(Y.shape[0]):
-    Y[i,:] = (Y[i,:]-Ymean) / Ystd
-
-
-
-input_size = X.shape[1] #we input both X and P
-output_size = Y.shape[1]
-
-"""data for training"""
-input_x = X
+input_x = np.concatenate((X,P),axis = 1) #input of nn, including X and P
 input_y = Y
 
 
-number_example =input_x.shape[0]
-print("Data is processed")
+input_size  = input_x.shape[1]
+output_size = input_y.shape[1]
 
+number_example =input_x.shape[0]
+
+print("DogData is processed")
+    
+    
 
 #--------------------------------above is dataprocess-------------------------------------
-
 
 """ Phase Function Neural Network """
 
@@ -111,35 +105,35 @@ rng = np.random.RandomState(23456)
 keep_prob = tf.placeholder(tf.float32)  # dropout (keep_prob) rate  0.7 on training, but should be 1 for testing
 
 # W0: 512*342 
-W0 = tf.get_variable("W0", shape=[input_size, 512], initializer=tf.contrib.layers.xavier_initializer())
-b0 = tf.Variable(initial_beta((1, 512)), name='b0') #b0: 1*512
+W0 = tf.get_variable("W0", shape=[512,input_size], initializer=tf.contrib.layers.xavier_initializer())     #W0: 512*input_size 
+b0 = tf.Variable(initial_beta((512,1)), name='b0')                                                         #b0: 512*1
 
 # W1: 512*512 
-W1 = tf.get_variable("W1", shape=[512, 512], initializer=tf.contrib.layers.xavier_initializer())
-b1 = tf.Variable(initial_beta((1, 512)), name='b1') #b0: 1*512
+W1 = tf.get_variable("W1", shape=[512, 512], initializer=tf.contrib.layers.xavier_initializer())           #W1: 512*512
+b1 = tf.Variable(initial_beta((512,1)), name='b1')                                                        #b1: 512*1
 
 
 # W2: 512*311
-W2 = tf.get_variable("W2", shape=[512, output_size], initializer=tf.contrib.layers.xavier_initializer())
-b2 = tf.Variable(initial_beta((1, output_size)), name='b2') #b0: 1*512
+W2 = tf.get_variable("W2", shape=[output_size, 512], initializer=tf.contrib.layers.xavier_initializer())   #W2: out_size*512
+b2 = tf.Variable(initial_beta((output_size, 1)), name='b2')                                                #b2: out_size*1
 
 
 
 
 #structure of nn
-H0 = X_nn        #input of nn     dims:  ?*342
+H0 = tf.transpose(X_nn)           #input of nn     dims:  in*?
 H0 = tf.nn.dropout(H0, keep_prob=keep_prob)
 
-H1 = tf.matmul(H0, W0) + b0      #dims:  ?*342 mul 342*512 = ?*512
-H1 = tf.nn.elu(H1)               #get 1th hidden layer with 'ELU' funciton
+H1 = tf.matmul(W0, H0) + b0       #dims: hid*in mul in*? = hid*?
+H1 = tf.nn.elu(H1)                #get 1th hidden layer with 'ELU' funciton
 H1 = tf.nn.dropout(H1, keep_prob=keep_prob) #dropout with parameter of 'keep_prob'
 
 
-H2 = tf.matmul(H1, W1) + b1       #dims: ?*512 mul 512*512 = ?*512
+H2 = tf.matmul(W1, H1) + b1       #dims: hid*hid mul hid*? = hid*?
 H2 = tf.nn.elu(H2)                #get 2th hidden layer with 'ELU' funciton
 H2 = tf.nn.dropout(H2, keep_prob=keep_prob) #dropout with parameter of 'keep_prob'
 
-H3 = tf.matmul(H2, W2) + b2       #dims: ?*512 mul 512*311 =?*311
+H3 = tf.matmul(W2, H2) + b2       #dims: out*hid mul hid*? =out*?
 
 
 #loss function with regularizatoin, and regularization rate=0.01
@@ -155,13 +149,13 @@ regularization_penalty = tf.contrib.layers.apply_regularization(l1_regularizer, 
 def regularization_penalty(a0, a1, a2, gamma):
     return gamma * (tf.reduce_mean(tf.abs(a0))+tf.reduce_mean(tf.abs(a1))+tf.reduce_mean(tf.abs(a2)))/3
 
-loss = tf.reduce_mean(tf.square(Y_nn - H3))
+loss = tf.reduce_mean(tf.square(tf.transpose(Y_nn) - H3))
 loss_regularization = loss + regularization_penalty(W0, W1, W2, 0.01)
 
 
 #optimizer, learning rate 0.0001
 learning_rate = 0.0001
-optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
+optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss_regularization)
 
 
 #session
@@ -201,7 +195,8 @@ rng.shuffle(I)
 
 
 #training set and  test set
-num_testBatch  = np.int(total_batch/10)
+count_test  = 0
+num_testBatch  = np.int(total_batch*count_test)
 num_trainBatch = total_batch - num_testBatch
 print("training_batch:", num_trainBatch)
 print("test_batch:", num_testBatch)
@@ -234,10 +229,10 @@ for epoch in range(training_epochs):
         batch_xs = input_x[index_train]
         batch_ys = input_y[index_train]
         feed_dict = {X_nn: batch_xs, Y_nn: batch_ys, keep_prob: 0.7}
-        l,l_r, _, = sess.run([loss,loss_regularization, optimizer], feed_dict=feed_dict)
+        l, _, = sess.run([loss_regularization, optimizer], feed_dict=feed_dict)
         avg_cost_train += l / num_trainBatch
-        if i % 2500 == 0:
-            print(i, "trainingloss:", l, "trainingloss_reg:", l_r)
+        if i % 1000 == 0:
+            print(i, "trainingloss:", l)
             
     for i in range(num_testBatch):
         if i==0:
@@ -249,7 +244,7 @@ for epoch in range(training_epochs):
         feed_dict = {X_nn: batch_xs, Y_nn: batch_ys, keep_prob: 1}
         testError = sess.run(loss, feed_dict=feed_dict)
         avg_cost_test += testError / num_testBatch
-        if i % 2500 == 0:
+        if i % 1000 == 0:
             print(i, "testloss:",testError)
     
     #print and save training test error 
@@ -265,9 +260,9 @@ for epoch in range(training_epochs):
     
     
     """get np.float32 format"""
-    weight0 = sess.run(W0).transpose()
-    weight1 = sess.run(W1).transpose()
-    weight2 = sess.run(W2).transpose()
+    weight0 = sess.run(W0)
+    weight1 = sess.run(W1)
+    weight2 = sess.run(W2)
     bias0 = sess.run(b0)
     bias1 = sess.run(b1)
     bias2 = sess.run(b2)
