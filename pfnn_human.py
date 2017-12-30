@@ -59,10 +59,10 @@ Ystd[8+w*2+j*3*1:8+w*2+j*3*2] = Ystd[8+w*2+j*3*1:8+w*2+j*3*2].mean() # Vel
 Ystd[8+w*2+j*3*2:8+w*2+j*3*3] = Ystd[8+w*2+j*3*2:8+w*2+j*3*3].mean() # Rot
 
 """ Save Mean / Std / Min / Max """
-Xmean.tofile('./human/nn/Xmean.bin')
-Ymean.tofile('./human/nn/Ymean.bin')
-Xstd.tofile('./human/nn/Xstd.bin')
-Ystd.tofile('./human/nn/Ystd.bin')
+Xmean.tofile('./human/data/Xmean.bin')
+Ymean.tofile('./human/data/Ymean.bin')
+Xstd.tofile('./human/data/Xstd.bin')
+Ystd.tofile('./human/data/Ystd.bin')
 
 
 """ Normalize Data """
